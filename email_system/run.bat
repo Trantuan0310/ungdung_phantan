@@ -23,6 +23,8 @@ start cmd /k "celery -A tasks worker --loglevel=info --pool=solo"
 
 REM Đợi Celery khởi động
 timeout /t 2
+REM Khởi động Celery Beat
+start cmd /k "celery -A tasks beat --loglevel=info"
 
 REM Khởi động ứng dụng chính (thay app.py bằng file main của bạn nếu khác)
 start cmd /k "python app.py"
