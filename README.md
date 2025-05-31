@@ -201,5 +201,5 @@ celery -A tasks inspect active
 
 
 
-**Phát triển bởi:** [Trần Tuấn Anh & Nguyễn Hoàng BáchBách]
+**Phát triển bởi:** [Trần Tuấn Anh & Nguyễn Hoàng Bách]
 **Ngày cập nhật:** May 2025
