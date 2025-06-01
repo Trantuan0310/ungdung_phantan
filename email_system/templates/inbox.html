@@ -62,9 +62,7 @@
             max-width: 1200px;
             margin: 2rem auto;
             padding: 0 1rem;
-        }
-
-        .stats-grid {
+        }        .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
@@ -79,39 +77,14 @@
             box-shadow: var(--box-shadow);
             transition: all 0.2s;
         }
-
-        .stat-card i {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-card.total i {
-            color: var(--primary-color);
-        }
-
-        .stat-card.sent i {
-            color: var(--success-color);
-        }
-
-        .stat-card.pending i {
-            color: var(--warning-color);
-        }
-
-        .stat-card.failed i {
-            color: var(--danger-color);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--gray-900);
-        }
-
-        .stat-label {
-            color: var(--gray-700);
-            font-size: 0.95rem;
-        }
-
+        .stat-card i { font-size: 2rem; margin-bottom: 0.5rem; }
+        .stat-card.total i { color: var(--primary-color); }
+        .stat-card.sent i { color: var(--success-color); }
+        .stat-card.pending i { color: var(--warning-color); }
+        .stat-card.scheduled i { color: #9c27b0; }
+        .stat-card.failed i { color: var(--danger-color); }
+        .stat-number { font-size: 2rem; font-weight: 700; color: var(--gray-900); }
+        .stat-label { color: var(--gray-700); font-size: 0.95rem; }
         .email-table-container {
             background: #fff;
             border-radius: var(--border-radius);
@@ -142,57 +115,78 @@
             border: none;
             padding: 1rem;
             border-bottom: 2px solid var(--gray-200);
-        }
-
-        .email-table td {
+        }        .email-table td {
             padding: 1rem;
             border-bottom: 1px solid var(--gray-200);
             vertical-align: middle;
+        }        .email-table td.status-col {
+            white-space: nowrap;
+            text-align: center;
+        }
+        .email-table td.schedule-col {
+            white-space: nowrap;
+            min-width: 150px;
+            font-size: 0.875rem;
+        }
+        .schedule-time {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .schedule-date {
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 0.85rem;
+        }
+        .schedule-clock {
+            color: var(--gray-600);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .schedule-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        .schedule-inline .date-part {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        .schedule-inline .time-part {
+            color: var(--gray-600);
+            background: var(--gray-100);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
         }
 
         .email-table tbody tr:hover {
             background: var(--gray-100);
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            white-space: nowrap;
+        }.status-badge {
+            display: inline-block;
             padding: 0.375rem 0.75rem;
             border-radius: 12px;
             font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.025em;
+            white-space: nowrap;
+            line-height: 1;
+        }.status-sent { background: #e8f5e8; color: var(--success-color); }
+        .status-pending { background: #fef7e0; color: #b08800; }
+        .status-scheduled { background: #f3e5f5; color: #9c27b0; }
+        .status-failed { background: #fce8e6; color: var(--danger-color); }
+        .status-sending { background: #e3f2fd; color: var(--primary-color); }        .action-buttons { 
+            display: flex; 
+            gap: 0.5rem; 
+            align-items: center; 
+            flex-wrap: nowrap;
+            white-space: nowrap;
         }
-
-        .status-sent {
-            background: #e8f5e8;
-            color: var(--success-color);
-        }
-
-        .status-pending {
-            background: #fef7e0;
-            color: #b08800;
-        }
-
-        .status-failed {
-            background: #fce8e6;
-            color: var(--danger-color);
-        }
-
-        .status-sending {
-            background: #e3f2fd;
-            color: var(--primary-color);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
         .btn-action {
             padding: 0.375rem 0.75rem;
             border-radius: 6px;
@@ -201,6 +195,8 @@
             text-decoration: none;
             border: 1px solid transparent;
             transition: all 0.15s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .btn-view {
@@ -247,30 +243,44 @@
             padding: 3rem;
             color: var(--gray-500);
         }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 0 0.5rem;
-                margin: 1rem auto;
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }        @media (max-width: 768px) {
+            .main-container { padding: 0 0.5rem; margin: 1rem auto; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .email-table { font-size: 0.875rem; }
+            .status-badge { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
+            .action-buttons { gap: 0.25rem; }
+            .btn-action { 
+                font-size: 0.7rem; 
+                padding: 0.25rem 0.5rem; 
             }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .email-table {
-                font-size: 0.875rem;
-            }
-
-            .action-buttons {
+            .schedule-inline {
                 flex-direction: column;
-                gap: 0.25rem;
+                gap: 2px;
+                align-items: flex-start;
+            }
+            .schedule-inline .date-part {
+                font-size: 0.8rem;
+            }
+            .schedule-inline .time-part {
+                font-size: 0.75rem;
+                padding: 1px 4px;
+            }
+        }
+        @media (max-width: 480px) {
+            .btn-action {
+                padding: 0.25rem 0.4rem;
+                font-size: 0;
+            }
+            .btn-action i {
+                font-size: 0.85rem;
+                margin: 0;
+            }
+            .btn-action::after {
+                content: attr(title);
+                font-size: 0.65rem;
+                display: block;
+                margin-top: 2px;
+                line-height: 1;
             }
         }
     </style>
@@ -283,12 +293,11 @@
             <a href="{{ url_for('send_email') }}" class="btn btn-compose"><i class="fas fa-plus"></i> Soạn thư mới</a>
         </div>
     </nav>
-    <div class="main-container">
-        <div class="stats-grid">
-            {% set total_emails = emails|length %}
+    <div class="main-container">        <div class="stats-grid">            {% set total_emails = emails|length %}
             {% set sent_emails = emails|selectattr('3', 'equalto', 'sent')|list|length %}
             {% set pending_emails = emails|selectattr('3', 'equalto', 'pending')|list|length %}
-            {% set failed_emails = emails|selectattr('3', 'equalto', 'fail')|list|length %}
+            {% set scheduled_emails = emails|selectattr('3', 'equalto', 'scheduled')|list|length %}
+            {% set failed_emails = emails|selectattr('3', 'equalto', 'failed')|list|length %}
             <div class="stat-card total">
                 <i class="fas fa-envelope"></i>
                 <div class="stat-number">{{ total_emails }}</div>
@@ -304,6 +313,11 @@
                 <div class="stat-number">{{ pending_emails }}</div>
                 <div class="stat-label">Chờ gửi</div>
             </div>
+            <div class="stat-card scheduled">
+                <i class="fas fa-calendar-alt"></i>
+                <div class="stat-number">{{ scheduled_emails }}</div>
+                <div class="stat-label">Đã lên lịch</div>
+            </div>
             <div class="stat-card failed">
                 <i class="fas fa-exclamation-triangle"></i>
                 <div class="stat-number">{{ failed_emails }}</div>
@@ -318,59 +332,60 @@
             {% if emails %}
             <div class="table-responsive">
                 <table class="table email-table">
-                    <thead>
-                        <tr>
+                    <thead>                        <tr>
                             <th style="width: 80px;">ID</th>
                             <th style="width: 200px;">Người nhận</th>
                             <th>Tiêu đề</th>
-                            <th style="width: 120px;">Trạng thái</th>
+                            <th style="width: 140px;">Trạng thái</th>
                             <th style="width: 150px;">Lịch gửi</th>
                             <th style="width: 180px;">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for email in emails %}
-                        <tr>
-                            <td class="fw-bold text-muted">{{ email[0] }}</td>
-                            <td>
-                                <div class="fw-medium">{{ email[1] }}</div>
-                            </td>
-                            <td>
-                                <div class="fw-medium">{{ email[2] }}</div>
-                            </td>
-                            <td>
-                                {% if email[3] == 'sent' %}
-                                <span class="status-badge status-sent"><i class="fas fa-check"></i> Đã gửi</span>
-                                {% elif email[3] == 'fail' %}
-                                <span class="status-badge status-failed"><i class="fas fa-times"></i> Lỗi</span>
-                                {% elif email[3] == 'pending' %}
-                                <span class="status-badge status-pending"><i class="fas fa-clock"></i> Chờ gửi</span>
-                                {% elif email[3] == 'sending' %}
-                                <span class="status-badge status-sending"><i class="fas fa-spinner fa-spin"></i> Đang
-                                    gửi</span>
-                                {% else %}
-                                <span class="status-badge">{{ email[3] }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if email[4] %}
-                                <div class="fw-medium">{{ email[4] }}</div>
-                                {% else %}
-                                <span class="text-muted">Ngay lập tức</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <a href="{{ url_for('view_email', email_id=email[0]) }}" class="btn-action btn-view"
-                                        title="Xem chi tiết"><i class="fas fa-eye"></i> Xem</a>
-                                    {% if email[3] == 'pending' and email[4] %}
-                                    <a href="{{ url_for('cancel_email', email_id=email[0]) }}"
-                                        class="btn-action btn-cancel" title="Hủy gửi"><i class="fas fa-ban"></i> Hủy</a>
+                            <tr>
+                                <td class="fw-bold text-muted">{{ email[0] }}</td>
+                                <td><div class="fw-medium">{{ email[1] }}</div></td>
+                                <td><div class="fw-medium">{{ email[2] }}</div></td>
+                                <td class="status-col">
+                                    {% if email[3] == 'sent' %}
+                                        <span class="status-badge status-sent"><i class="fas fa-check"></i> Đã gửi</span>
+                                    {% elif email[3] == 'failed' %}
+                                        <span class="status-badge status-failed"><i class="fas fa-times"></i> Lỗi</span>
+                                    {% elif email[3] == 'pending' %}
+                                        <span class="status-badge status-pending"><i class="fas fa-clock"></i> Chờ gửi</span>
+                                    {% elif email[3] == 'scheduled' %}
+                                        <span class="status-badge status-scheduled"><i class="fas fa-calendar-alt"></i> Đã lên lịch</span>
+                                    {% elif email[3] == 'sending' %}
+                                        <span class="status-badge status-sending"><i class="fas fa-spinner fa-spin"></i> Đang gửi</span>
+                                    {% else %}
+                                        <span class="status-badge">{{ email[3] }}</span>
                                     {% endif %}
-                                    {% if email[3] == 'fail' %}
-                                    <a href="{{ url_for('resend_email', email_id=email[0]) }}"
-                                        class="btn-action btn-resend" title="Gửi lại"><i class="fas fa-redo"></i> Gửi
-                                        lại</a>
+                            </td>
+                            <td class="schedule-col">
+                                {% if email[4] %}
+                                    {% set scheduled_datetime = email[4] %}
+                                    {% if 'T' in scheduled_datetime %}
+                                        {% set date_part = scheduled_datetime.split('T')[0] %}
+                                        {% set time_part = scheduled_datetime.split('T')[1][:5] %}
+                                        <div class="schedule-inline">
+                                            <span class="date-part">{{ date_part }}</span>
+                                            <span class="time-part"><i class="fas fa-clock"></i> {{ time_part }}</span>
+                                        </div>
+                                    {% else %}
+                                        <div class="fw-medium">{{ scheduled_datetime }}</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted"><i class="fas fa-bolt"></i> Ngay lập tức</span>
+                                {% endif %}
+                            </td>
+                            <td>                                <div class="action-buttons">
+                                    <a href="{{ url_for('view_email', email_id=email[0]) }}" class="btn-action btn-view" title="Xem chi tiết"><i class="fas fa-eye"></i> Xem</a>
+                                    {% if (email[3] == 'pending' or email[3] == 'scheduled') and email[4] %}
+                                        <a href="{{ url_for('cancel_email', email_id=email[0]) }}" class="btn-action btn-cancel" title="Hủy gửi"><i class="fas fa-ban"></i> Hủy</a>
+                                    {% endif %}
+                                    {% if email[3] == 'failed' %}
+                                        <a href="{{ url_for('resend_email', email_id=email[0]) }}" class="btn-action btn-resend" title="Gửi lại"><i class="fas fa-redo"></i> Gửi lại</a>
                                     {% endif %}
                                     <a href="{{ url_for('delete_email', email_id=email[0]) }}"
                                         class="btn-action btn-delete" title="Xóa email"

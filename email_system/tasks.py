@@ -1,5 +1,5 @@
 from celery import Celery
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 import smtplib
 from email.mime.text import MIMEText
@@ -29,18 +29,19 @@ print("===================================")
 # Cấu hình Celery
 app = Celery('tasks', broker='redis://localhost:6379/0')
 
-# Cấu hình lịch cho Celery Beat - kiểm tra email thường xuyên hơn
+# Cấu hình lịch cho Celery Beat - chỉ làm backup check
 app.conf.beat_schedule = {
-    'check-scheduled-emails-frequently': {
+    'check-scheduled-emails-backup': {
         'task': 'tasks.check_scheduled_emails',
-        'schedule': 5.0,  # 5 giây một lần để gần như thời gian thực
+        'schedule': 30.0,  # Giảm xuống mỗi 30s làm backup thôi
     },
 }
 
 @app.task
 def check_scheduled_emails():
     """
-    Kiểm tra và gửi các email có lịch gửi đã đến hạn
+    Kiểm tra các email có lịch gửi đã đến hạn (backup cho ETA tasks)
+    Chỉ xử lý những email chưa được schedule bằng ETA
     """
     try:
         conn = sqlite3.connect('emails.db')
@@ -48,16 +49,9 @@ def check_scheduled_emails():
         
         # Lấy thời gian hiện tại theo ISO format
         current_time = datetime.now().isoformat()
-        print(f"Kiểm tra email đến hạn gửi tại thời điểm: {current_time}")
+        print(f"🔄 [BACKUP CHECK] Kiểm tra email backup tại: {current_time}")
         
-        # Thêm khoảng thời gian nhỏ (5 giây) để đảm bảo email được gửi kịp thời
-        cursor.execute("SELECT strftime('%s', datetime('now')) as now")
-        now_timestamp = int(cursor.fetchone()[0])
-        future_timestamp = now_timestamp + 5  # 5 giây tới
-        future_time = datetime.fromtimestamp(future_timestamp).isoformat()
-        
-        # Lấy các email đến hạn gửi theo thứ tự ưu tiên
-        # Bao gồm cả email sẽ đến hạn trong 5 giây tới
+        # Chỉ lấy email pending (chưa được ETA schedule) và đã đến hạn
         cursor.execute("""
             SELECT id, priority, scheduled_time 
             FROM emails 
@@ -73,19 +67,22 @@ def check_scheduled_emails():
                 ELSE 4
               END,
               scheduled_time ASC
-        """, (future_time,))
+        """, (current_time,))
         
         emails = cursor.fetchall()
         conn.close()
         
-        # Gửi các email đến hạn
-        print(f"Tìm thấy {len(emails)} email cần gửi")
-        for email_id, priority, scheduled_time in emails:
-            print(f"Đang gửi email theo lịch: ID={email_id}, Priority={priority}, Scheduled={scheduled_time}")
-            send_email_task.delay(email_id, priority=priority)
+        if emails:
+            print(f"🚨 [BACKUP] Tìm thấy {len(emails)} email bị miss bởi ETA, gửi ngay:")
+            for email_id, priority, scheduled_time in emails:
+                print(f"  📧 Email ID={email_id}, Priority={priority}, Scheduled={scheduled_time}")
+                send_email_task.delay(email_id, priority=priority)
+        else:
+            print(f"✅ [BACKUP] Không có email nào bị miss")
             
     except Exception as e:
-        print("Lỗi kiểm tra email theo lịch:", str(e))
+        error_time = datetime.now().isoformat()
+        print(f"[{error_time}] ❌ LỖI backup check: {str(e)}")
         traceback.print_exc()
 
 @app.task
@@ -94,20 +91,36 @@ def send_email_task(email_id, priority='medium'):
     Gửi email và cập nhật trạng thái
     """
     conn = None
+    start_time = datetime.now()
+    print(f"📧 [{start_time.isoformat()}] BẮT ĐẦU GỬI EMAIL ID={email_id}, Priority={priority.upper()}")
+    
     try:
         # Lấy thông tin email từ database
         conn = sqlite3.connect('emails.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT recipient, subject, body FROM emails WHERE id=? AND is_cancelled=0", (email_id,))
+        cursor.execute("SELECT recipient, subject, body, scheduled_time FROM emails WHERE id=? AND is_cancelled=0", (email_id,))
         row = cursor.fetchone()
         
         if not row:
-            print(f"Không tìm thấy email ID={email_id} hoặc email đã bị hủy")
+            print(f"❌ Không tìm thấy email ID={email_id} hoặc email đã bị hủy")
             if conn:
                 conn.close()
             return
         
-        recipient, subject, body = row
+        recipient, subject, body, scheduled_time = row
+        
+        # Kiểm tra xem có đúng thời gian không (cho ETA tasks)
+        if scheduled_time:
+            scheduled_dt = datetime.fromisoformat(scheduled_time)
+            current_dt = datetime.now()
+            time_diff = abs((current_dt - scheduled_dt).total_seconds())
+            
+            if time_diff > 2:  # Cho phép sai lệch 2 giây
+                print(f"⚠️  Email ID={email_id} gửi muộn {time_diff:.1f}s (scheduled: {scheduled_time})")
+            else:
+                print(f"✅ Email ID={email_id} gửi đúng thời gian (sai lệch: {time_diff:.1f}s)")
+        
+        print(f"📋 Thông tin: To={recipient}, Subject='{subject}'")
         
         # Cập nhật trạng thái sang đang gửi
         cursor.execute("UPDATE emails SET status='sending' WHERE id=?", (email_id,))
@@ -181,3 +194,50 @@ def send_email_task(email_id, priority='medium'):
         # Đảm bảo đóng kết nối database trong mọi trường hợp
         if conn:
             conn.close()
+
+@app.task
+def schedule_email_with_eta(email_id, scheduled_time_str):
+    """
+    Lên lịch gửi email với ETA chính xác (không delay)
+    """
+    try:
+        scheduled_time = datetime.fromisoformat(scheduled_time_str)
+        current_time = datetime.now()
+        
+        print(f"📅 SCHEDULE EMAIL ID={email_id} cho {scheduled_time.isoformat()}")
+        print(f"⏰ Thời gian hiện tại: {current_time.isoformat()}")
+        
+        if scheduled_time <= current_time:
+            # Nếu thời gian đã qua, gửi ngay
+            print(f"⚡ Thời gian đã qua, gửi ngay email ID={email_id}")
+            send_email_task.delay(email_id)
+        else:
+            # Schedule với ETA chính xác
+            time_diff = scheduled_time - current_time
+            print(f"⏳ Sẽ gửi sau {time_diff.total_seconds():.1f} giây")
+            
+            task_result = send_email_task.apply_async(
+                args=[email_id],
+                eta=scheduled_time,
+                task_id=f"email_{email_id}_{int(scheduled_time.timestamp())}"
+            )
+            
+            print(f"✅ Email ID={email_id} đã được lên lịch với Task ID: {task_result.id}")
+            
+            # Cập nhật status trong database để theo dõi
+            conn = sqlite3.connect('emails.db')
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE emails SET status='scheduled' WHERE id=?", 
+                (email_id,)
+            )
+            conn.commit()
+            conn.close()
+            
+            return task_result.id
+            
+    except Exception as e:
+        error_time = datetime.now().isoformat()
+        print(f"[{error_time}] ❌ LỖI schedule email ID={email_id}: {str(e)}")
+        traceback.print_exc()
+        return None

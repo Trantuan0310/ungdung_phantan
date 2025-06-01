@@ -68,10 +68,45 @@
         .btn-back:hover {
             background: #e0e3e7;
             color: #202124;
-        }
-        .alert {
+        }        .alert {
             border-radius: 6px;
             margin-bottom: 1.5rem;
+        }
+        .field-highlight {
+            border: 2px solid #ea4335 !important;
+            background-color: #fef7f7 !important;
+            animation: pulse-red 2s infinite;
+        }
+        .field-highlight:focus {
+            border-color: #ea4335 !important;
+            box-shadow: 0 0 0 3px rgba(234, 67, 53, 0.15) !important;
+        }        .resend-warning {
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            color: #664d03;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .resend-warning::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #f57c00;
+        }
+        .resend-warning .fas {
+            color: #f57c00;
+            margin-right: 0.5rem;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(234, 67, 53, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(234, 67, 53, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(234, 67, 53, 0); }
         }
         @media (max-width: 600px) {
             .main-container { padding: 0 0.5rem; }
@@ -88,45 +123,74 @@
                 {{ message }}
               {% endfor %}
             </div>
-          {% endif %}
-        {% endwith %}
+          {% endif %}        {% endwith %}
+        
+        {% if is_resend %}
+        <div class="resend-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Gửi lại email bị lỗi:</strong> Vui lòng kiểm tra và chỉnh sửa các thông tin được tô đỏ trước khi gửi lại.
+        </div>
+        {% endif %}
+        
         <div class="compose-card">
             <div class="card-title">
-                <i class="fas fa-pen"></i> Soạn thư mới
+                <i class="fas fa-{{ 'redo' if is_resend else 'pen' }}"></i> 
+                {{ 'Gửi lại email' if is_resend else 'Soạn thư mới' }}
                 <a href="{{ url_for('index') }}" class="btn btn-back ms-auto"><i class="fas fa-arrow-left"></i> Quay lại</a>
-            </div>
-            <form method="post">
+            </div>            <form method="post">
+                {% if is_resend %}
+                    <input type="hidden" name="resend_id" value="{{ request.args.get('resend') }}">
+                {% endif %}
                 <div class="mb-3">
                     <label class="form-label">Người nhận</label>
-                    <input type="email" class="form-control" name="recipient" required>
+                    <input type="email" class="form-control {{ 'field-highlight' if is_resend else '' }}" 
+                           name="recipient" 
+                           value="{{ email_data.recipient if email_data else '' }}" 
+                           required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Tiêu đề</label>
-                    <input type="text" class="form-control" name="subject" required>
+                    <input type="text" class="form-control {{ 'field-highlight' if is_resend else '' }}" 
+                           name="subject" 
+                           value="{{ email_data.subject if email_data else '' }}" 
+                           required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Nội dung</label>
-                    <textarea class="form-control" name="body" rows="5" required></textarea>
+                    <textarea class="form-control {{ 'field-highlight' if is_resend else '' }}" 
+                              name="body" rows="5" required>{{ email_data.body if email_data else '' }}</textarea>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Độ ưu tiên</label>
                     <select class="form-select" name="priority">
-                        <option value="high">Cao</option>
-                        <option value="medium" selected>Trung bình</option>
-                        <option value="low">Thấp</option>
+                        <option value="high" {{ 'selected' if email_data and email_data.priority == 'high' else '' }}>Cao</option>
+                        <option value="medium" {{ 'selected' if not email_data or email_data.priority == 'medium' else '' }}>Trung bình</option>
+                        <option value="low" {{ 'selected' if email_data and email_data.priority == 'low' else '' }}>Thấp</option>
                     </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Lịch gửi (tùy chọn)</label>
-                    <input type="text" class="form-control" id="schedule" name="schedule" placeholder="Chọn ngày giờ">
+                    <input type="text" class="form-control" id="schedule" name="schedule" 
+                           placeholder="Chọn ngày giờ"
+                           value="{{ email_data.scheduled_time if email_data and email_data.scheduled_time else '' }}">
                 </div>
-                <button type="submit" class="btn btn-send"><i class="fas fa-paper-plane"></i> Gửi</button>
+                <button type="submit" class="btn btn-send">
+                    <i class="fas fa-{{ 'redo' if is_resend else 'paper-plane' }}"></i> 
+                    {{ 'Gửi lại' if is_resend else 'Gửi' }}
+                </button>
             </form>
         </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    </div>    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        // Xử lý scheduled_time format
+        let scheduleValue = document.getElementById('schedule').value;
+        if (scheduleValue && scheduleValue.includes('T')) {
+            // Convert ISO format to flatpickr format
+            scheduleValue = scheduleValue.replace('T', ' ').substring(0, 16);
+            document.getElementById('schedule').value = scheduleValue;
+        }
+        
         flatpickr("#schedule", {
             enableTime: true,
             dateFormat: "Y-m-d H:i",
@@ -134,6 +198,16 @@
             minDate: "today",
             minuteIncrement: 1,
             allowInput: true
+        });
+        
+        // Thêm hiệu ứng focus cho các trường highlight
+        document.querySelectorAll('.field-highlight').forEach(function(element) {
+            element.addEventListener('focus', function() {
+                this.style.animation = 'none';
+            });
+            element.addEventListener('blur', function() {
+                this.style.animation = 'pulse-red 2s infinite';
+            });
         });
     </script>
 </body>
